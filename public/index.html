@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HabitFlow</title>
-  <!-- Supabase JS Library -->
+  
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <meta name="theme-color" content="#05d621">
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * {
@@ -162,7 +166,6 @@
       margin-bottom: 20px;
     }
 
-    /* Loading Spinner Styles */
     .spinner {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #05d621;
@@ -183,12 +186,10 @@
 <body>
 
   <div class="container">
-    <!-- LOADING STATE (Shows instantly to prevent login flicker) -->
     <div id="loadingSection">
       <div class="spinner"></div>
     </div>
 
-    <!-- AUTH SECTION (Hidden by default) -->
     <div id="authSection" class="hidden">
       <h2>Welcome to HabitFlow</h2>
       <input type="email" id="email" placeholder="Email" style="margin-bottom: 10px;">
@@ -200,7 +201,6 @@
       <p id="authError" style="color: red; font-size: 0.85rem; margin-top: 10px;"></p>
     </div>
 
-    <!-- MAIN APP SECTION -->
     <div id="appSection" class="hidden">
       <div class="header">
         <h1>HabitFlow</h1>
@@ -221,17 +221,13 @@
   </div>
 
   <script>
-    // Configuration Settings
     const SUPABASE_URL = 'https://fivqaxwwbireqbsldkdb.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable__2a8ei_CYTwQNbbcMfAyVg_2-BtQIJ3';
     
-    // Initialize Supabase Client
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     window.onload = async () => {
       const { data: { session } } = await supabaseClient.auth.getSession();
-      
-      // Remove loading state once auth status is known
       document.getElementById('loadingSection').classList.add('hidden');
 
       if (session) {
@@ -283,7 +279,6 @@
       loadHabits();
     }
 
-    // Load Habits with Daily Reset Logic
     async function loadHabits() {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) return;
@@ -300,23 +295,22 @@
 
       if (error) return console.error('Error loading habits:', error);
 
-      // Perform daily reset checks for each habit
       for (let habit of habits) {
         let updates = {};
 
-        // Reset checkbox if completed date was before today
+        // Reset checkmark if last completion was before today
         if (habit.completed && habit.last_completed_date !== today) {
           updates.completed = false;
         }
 
-        // Reset streak if missed yesterday entirely
+        // Reset streak if habit was missed yesterday
         if (habit.last_completed_date && habit.last_completed_date < yesterday) {
           updates.streak = 0;
         }
 
         if (Object.keys(updates).length > 0) {
           await supabaseClient.from('habits').update(updates).eq('id', habit.id);
-          Object.assign(habit, updates); // Apply changes to local habit object
+          Object.assign(habit, updates);
         }
       }
 
@@ -382,6 +376,8 @@
       let newStreak = currentStreak || 0;
       if (newStatus) {
         newStreak += 1;
+      } else {
+        newStreak = Math.max(0, newStreak - 1);
       }
 
       await supabaseClient.from('habits').update({ 
