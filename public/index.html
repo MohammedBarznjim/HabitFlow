@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HabitFlow</title>
   
+  <!-- Mobile & PWA App Icons -->
   <link rel="icon" type="image/png" sizes="192x192" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
   <meta name="theme-color" content="#05d621">
 
+  <!-- Supabase JS Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * {
@@ -120,6 +122,13 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex: 1;
+    }
+
+    .habit-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .reading-info {
@@ -135,13 +144,25 @@
       padding: 5px 8px;
     }
 
-    .delete-btn {
+    .icon-btn {
       background: none;
       border: none;
-      color: #ef4444;
       cursor: pointer;
-      font-size: 1.2rem;
-      padding: 4px 8px;
+      font-size: 1rem;
+      padding: 4px 6px;
+    }
+
+    .edit-btn {
+      color: #6b7280;
+    }
+
+    .edit-btn:hover {
+      color: #374151;
+      background: none;
+    }
+
+    .delete-btn {
+      color: #ef4444;
     }
 
     .delete-btn:hover {
@@ -174,6 +195,14 @@
       height: 30px;
       animation: spin 0.8s linear infinite;
       margin: 20px auto;
+    }
+
+    .edit-input {
+      padding: 4px 8px;
+      font-size: 0.95rem;
+      border: 1px solid #05d621;
+      border-radius: 4px;
+      width: 100%;
     }
 
     @keyframes spin {
@@ -298,12 +327,10 @@
       for (let habit of habits) {
         let updates = {};
 
-        // Reset checkmark if last completion was before today
         if (habit.completed && habit.last_completed_date !== today) {
           updates.completed = false;
         }
 
-        // Reset streak if habit was missed yesterday
         if (habit.last_completed_date && habit.last_completed_date < yesterday) {
           updates.streak = 0;
         }
@@ -323,17 +350,19 @@
 
       habits.forEach((habit) => {
         const li = document.createElement('li');
+        li.id = `habit-${habit.id}`;
         if (habit.completed) li.classList.add('completed');
 
         li.innerHTML = `
           <div class="habit-row">
             <div class="habit-left">
               <input type="checkbox" ${habit.completed ? 'checked' : ''} onchange="toggleHabit(${habit.id}, ${habit.completed}, ${habit.streak}, '${habit.last_completed_date || ''}')">
-              <span class="habit-name">${habit.text}</span>
+              <span class="habit-name" id="name-${habit.id}">${habit.text}</span>
             </div>
-            <div>
+            <div class="habit-actions">
               <span class="streak">🔥 ${habit.streak || 0}</span>
-              <button class="delete-btn" onclick="deleteHabit(${habit.id})">&times;</button>
+              <button class="icon-btn edit-btn" onclick="enableEdit(${habit.id}, '${habit.text.replace(/'/g, "\\'")}')">✏️</button>
+              <button class="icon-btn delete-btn" onclick="deleteHabit(${habit.id})">&times;</button>
             </div>
           </div>
           ${habit.type === 'reading' ? `
@@ -345,6 +374,34 @@
         `;
         list.appendChild(li);
       });
+    }
+
+    function enableEdit(id, currentText) {
+      const nameSpan = document.getElementById(`name-${id}`);
+      nameSpan.innerHTML = `
+        <input type="text" class="edit-input" id="input-${id}" value="${currentText}" onkeydown="handleEditKey(event, ${id})">
+      `;
+      const input = document.getElementById(`input-${id}`);
+      input.focus();
+      input.select();
+    }
+
+    function handleEditKey(event, id) {
+      if (event.key === 'Enter') {
+        saveHabitName(id);
+      } else if (event.key === 'Escape') {
+        loadHabits();
+      }
+    }
+
+    async function saveHabitName(id) {
+      const input = document.getElementById(`input-${id}`);
+      const newText = input.value.trim();
+
+      if (newText !== '') {
+        await supabaseClient.from('habits').update({ text: newText }).eq('id', id);
+        loadHabits();
+      }
     }
 
     async function addHabit() {
