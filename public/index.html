@@ -437,11 +437,19 @@
         newStreak = Math.max(0, newStreak - 1);
       }
 
-      await supabaseClient.from('habits').update({ 
+      const validLastDate = lastCompletedDate && lastCompletedDate !== 'null' && lastCompletedDate !== '' 
+        ? lastCompletedDate 
+        : null;
+
+      const { error } = await supabaseClient.from('habits').update({ 
         completed: newStatus, 
         streak: newStreak,
-        last_completed_date: newStatus ? today : lastCompletedDate
+        last_completed_date: newStatus ? today : validLastDate
       }).eq('id', id);
+
+      if (error) {
+        console.error('Failed to update habit:', error);
+      }
 
       loadHabits();
     }
